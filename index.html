@@ -2,22 +2,27 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<title>Particles Camera v3 – Modern</title>
+<title>Particles Camera v4 – Privacy View</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <style>
-html,body{margin:0;padding:0;overflow:hidden;background:#000;font-family:system-ui,Arial}
+html,body{margin:0;padding:0;overflow:hidden;background:#000}
+#camView{
+ position:fixed;right:12px;bottom:12px;
+ width:180px;height:240px;
+ border-radius:14px;overflow:hidden;
+ box-shadow:0 12px 40px rgba(0,0,0,.7);
+ z-index:10
+}
+#camView video{
+ width:100%;height:100%;object-fit:cover;
+ transform:scaleX(-1)
+}
 #start{
- position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
- padding:14px 24px;font-size:16px;border:none;border-radius:14px;
- background:#00e5ff;color:#000;z-index:10
-}
-#preview{
- position:fixed;right:16px;bottom:16px;width:120px;height:160px;
- border-radius:16px;overflow:hidden;z-index:5;
- box-shadow:0 10px 40px rgba(0,0,0,.6)
-}
-#preview video{
- width:100%;height:100%;object-fit:cover;transform:scaleX(-1)
+ position:fixed;bottom:20px;left:50%;
+ transform:translateX(-50%);
+ padding:14px 26px;font-size:16px;
+ border:none;border-radius:14px;
+ background:#00e5ff;color:#000;z-index:11
 }
 video.main{display:none}
 </style>
@@ -26,8 +31,8 @@ video.main{display:none}
 
 <button id="start">Enable Camera</button>
 
-<div id="preview" style="display:none">
- <video id="previewVideo" autoplay playsinline muted></video>
+<div id="camView" style="display:none">
+ <video id="preview" autoplay playsinline muted></video>
 </div>
 
 <video id="video" class="main" autoplay playsinline></video>
@@ -39,13 +44,13 @@ video.main{display:none}
 <script>
 /* DEVICE */
 const isMobile=/Android|iPhone|iPad/i.test(navigator.userAgent);
-const COUNT=isMobile?6000:12000;
+const COUNT=isMobile?7000:14000;
 
 /* THREE */
 const scene=new THREE.Scene();
-scene.fog=new THREE.Fog(0x000000,40,160);
-const cam3D=new THREE.PerspectiveCamera(75,innerWidth/innerHeight,0.1,500);
-cam3D.position.z=85;
+scene.fog=new THREE.Fog(0x000000,50,180);
+const cam3D=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,600);
+cam3D.position.z=95;
 
 const renderer=new THREE.WebGLRenderer({antialias:true});
 renderer.setSize(innerWidth,innerHeight);
@@ -65,117 +70,83 @@ const tgt=new Float32Array(COUNT*3);
 const col=new Float32Array(COUNT*3);
 
 for(let i=0;i<COUNT;i++){
- const c=new THREE.Color().setHSL(Math.random(),1,.6);
+ const c=new THREE.Color(0x00e5ff);
  col[i*3]=c.r;col[i*3+1]=c.g;col[i*3+2]=c.b;
 }
-geo.setAttribute('position',new THREE.BufferAttribute(pos,3));
-geo.setAttribute('color',new THREE.BufferAttribute(col,3));
+geo.setAttribute("position",new THREE.BufferAttribute(pos,3));
+geo.setAttribute("color",new THREE.BufferAttribute(col,3));
 
 const mat=new THREE.PointsMaterial({
- size:isMobile?.18:.14,vertexColors:true,transparent:true,depthWrite:false
+ size:isMobile?.16:.12,
+ vertexColors:true,
+ transparent:true,
+ opacity:.9,
+ depthWrite:false
 });
 const pts=new THREE.Points(geo,mat);
 scene.add(pts);
 
-/* SHAPES */
-let si=0;
-const shapes=[galaxy,heart,flower,sphere,fireworks];
-function galaxy(){
+/* CAR WIREFRAME SHAPE */
+function carWireframe(){
  for(let i=0;i<COUNT;i++){
-  let r=Math.random()*42,a=Math.random()*Math.PI*2;
-  tgt[i*3]=Math.cos(a)*r;
-  tgt[i*3+1]=(Math.random()-.5)*10;
-  tgt[i*3+2]=Math.sin(a)*r;
+  let x=(Math.random()-0.5)*60;
+  let y=(Math.random()-0.5)*20;
+  let z=(Math.random()-0.5)*25;
+  if(Math.abs(x)>25&&Math.abs(y)<6) y*=0.3;
+  tgt[i*3]=x;
+  tgt[i*3+1]=y;
+  tgt[i*3+2]=z;
  }
 }
-function heart(){
- for(let i=0;i<COUNT;i++){
-  let t=Math.random()*Math.PI*2;
-  tgt[i*3]=16*Math.pow(Math.sin(t),3);
-  tgt[i*3+1]=13*Math.cos(t)-5*Math.cos(2*t)-2*Math.cos(3*t)-Math.cos(4*t);
-  tgt[i*3+2]=(Math.random()-.5)*10;
- }
-}
-function flower(){
- for(let i=0;i<COUNT;i++){
-  let t=Math.random()*Math.PI*2,r=22*Math.sin(6*t);
-  tgt[i*3]=Math.cos(t)*r;
-  tgt[i*3+1]=Math.sin(t)*r;
-  tgt[i*3+2]=(Math.random()-.5)*8;
- }
-}
-function sphere(){
- for(let i=0;i<COUNT;i++){
-  let u=Math.random(),v=Math.random();
-  let th=2*Math.PI*u,ph=Math.acos(2*v-1),r=30;
-  tgt[i*3]=r*Math.sin(ph)*Math.cos(th);
-  tgt[i*3+1]=r*Math.sin(ph)*Math.sin(th);
-  tgt[i*3+2]=r*Math.cos(ph);
- }
-}
-function fireworks(){
- for(let i=0;i<COUNT;i++){
-  let th=Math.random()*Math.PI*2,ph=Math.acos(2*Math.random()-1);
-  let r=Math.random()*35;
-  tgt[i*3]=r*Math.sin(ph)*Math.cos(th);
-  tgt[i*3+1]=r*Math.sin(ph)*Math.sin(th);
-  tgt[i*3+2]=r*Math.cos(ph);
- }
-}
-galaxy();
+carWireframe();
 
-/* HAND TRACKING (SMOOTHED) */
-let hx=0,hy=0,shx=0,shy=0,lock=false;
-const smooth=.18;
-
+/* HAND TRACKING */
+let hx=0,hy=0,shx=0,shy=0;
 const hands=new Hands({
  locateFile:f=>`https://cdn.jsdelivr.net/npm/@mediapipe/hands/${f}`
 });
 hands.setOptions({
  maxNumHands:1,modelComplexity:1,
- minDetectionConfidence:.7,minTrackingConfidence:.7
+ minDetectionConfidence:.7,
+ minTrackingConfidence:.7
 });
-
 hands.onResults(r=>{
  if(!r.multiHandLandmarks.length)return;
  const lm=r.multiHandLandmarks[0];
- const i=lm[8],t=lm[4];
- shx=(i.x-.5)*90; shy=-(i.y-.5)*60;
- hx+= (shx-hx)*smooth; hy+= (shy-hy)*smooth;
- const d=Math.hypot(i.x-t.x,i.y-t.y);
- if(d<.03&&!lock){
-  si=(si+1)%shapes.length;shapes[si]();
-  lock=true;setTimeout(()=>lock=false,650);
- }
+ const i=lm[8];
+ shx=(i.x-.5)*120;
+ shy=-(i.y-.5)*80;
+ hx+= (shx-hx)*.2;
+ hy+= (shy-hy)*.2;
 });
 
 /* CAMERA */
-const video=document.getElementById('video');
-const pv=document.getElementById('previewVideo');
-const btn=document.getElementById('start');
+const video=document.getElementById("video");
+const pv=document.getElementById("preview");
+const btn=document.getElementById("start");
+
 btn.onclick=async()=>{
  try{
   const stream=await navigator.mediaDevices.getUserMedia({video:true});
-  video.srcObject=stream; pv.srcObject=stream;
-  document.getElementById('preview').style.display='block';
+  video.srcObject=stream;
+  pv.srcObject=stream;
+  document.getElementById("camView").style.display="block";
   const cam=new Camera(video,{onFrame:async()=>hands.send({image:video})});
-  cam.start(); btn.remove();
- }catch(e){alert('Camera permission denied');}
+  cam.start();
+  btn.remove();
+ }catch(e){alert("Camera permission denied");}
 };
 
 /* LOOP */
-let pulse=0;
 function animate(){
  requestAnimationFrame(animate);
- pulse+=.02;
  for(let i=0;i<COUNT;i++){
-  pos[i*3]+= (tgt[i*3]+hx-pos[i*3])*.045;
-  pos[i*3+1]+= (tgt[i*3+1]+hy-pos[i*3+1])*.045;
-  pos[i*3+2]+= (tgt[i*3+2]-pos[i*3+2])*.045;
+  pos[i*3]+= (tgt[i*3]+hx-pos[i*3])*.04;
+  pos[i*3+1]+= (tgt[i*3+1]+hy-pos[i*3+1])*.04;
+  pos[i*3+2]+= (tgt[i*3+2]-pos[i*3+2])*.04;
  }
  geo.attributes.position.needsUpdate=true;
- pts.rotation.y+=.0012;
- pts.scale.setScalar(1+.02*Math.sin(pulse));
+ pts.rotation.y+=.001;
  renderer.render(scene,cam3D);
 }
 animate();
